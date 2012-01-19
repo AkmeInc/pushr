@@ -134,7 +134,7 @@ module Pushr
       end unless force == 'true' # ... unless forced from web GUI
       cap_command = CONFIG['cap_command'] || 'deploy:migrations'
       log.info(application) { "Deployment #{"(force) " if force == 'true' }starting..." }
-      @cap_output  = %x[cd #{path}/shared/cached-copy; cap #{cap_command} 2>&1]
+      @cap_output  = %x[cd #{path}/shared/cached-copy; bundle install && bundle exec cap #{cap_command} 2>&1]
       @success     = $?.success?
       @repository.reload!  # Update repository info (after deploy)
       log_deploy_result
