@@ -25,7 +25,7 @@ end
 
 desc "Stop application in production mode"
 task :stop do
-  %[thin -R config.ru -d -P thin.pid -l production.log -e production -p 4000 stop]
+  %x[thin -R config.ru -d -P thin.pid -l production.log -e production -p 4000 stop]
   puts "> Pushr stopped" if $?.success?
 end
 
