@@ -26,63 +26,6 @@ module Pushr
     def log; LOGGER; end
   end
 
-  # == Wrapping notifications
-  # Inspired by http://github.com/foca/integrity
-  class Notifier
-
-    # Inherit from this class in your notifiers
-    # See eg. http://github.com/karmi/pushr_notifiers/blob/master/irc.rb
-    class Base
-
-      include Pushr::Logger
-
-      attr_reader :config
-
-      def initialize(config={})
-        @config = config
-        log.fatal("#{self.class.name}") { "Notifier not configured!" } unless configured?
-      end
-
-      # Implement this method for your particular notification method
-      def deliver!
-        raise NoMethodError, "You need to implement 'deliver!' method in your notifier"
-      end
-
-      private
-
-      # Over-ride this method to send diferent message
-      def message(notification)
-        if notification.success
-          "Deployed #{notification.application} with revision #{notification.repository.info.revision} — #{notification.repository.info.message.slice(0, 100)}"
-        else
-          "FAIL! Deploying #{notification.application} failed. Check deploy.log for details."
-        end
-      end
-
-      # Implement this method to check for notifier configuration
-      def configured?
-        raise NoMethodError, "You need to implement 'configured?' method in your notifier"
-      end
-
-    end
-
-    # Twitter notifications (default)
-    class Twitter < Base
-
-      def deliver!(notification)
-        return unless configured?
-        %x[curl --silent --data status='#{message(notification)}' http://#{config['username']}:#{config['password']}@twitter.com/statuses/update.json]
-      end
-
-      private
-
-      def configured?
-        !config['username'].nil? && !config['password'].nil?
-      end
-    end
-
-  end # end Notifier
-
   # == Wrapping Git stuff
   class Repository
 
@@ -125,7 +68,6 @@ module Pushr
       @path = path
       @application = ::CONFIG['application'] || "You really should set this to something"
       @repository  = Repository.new(path)
-      load_notifiers
     end
 
     def deploy!(force=false)
@@ -138,7 +80,6 @@ module Pushr
       @success     = $?.success?
       @repository.reload!  # Update repository info (after deploy)
       log_deploy_result
-      send_notifications
     end
 
     private
@@ -151,26 +92,6 @@ module Pushr
         log.warn('[FAILURE]')   { "Error when deploying application! Check Capistrano output below:" }
         log.warn('Capistrano')  { @cap_output.to_s }
       end
-    end
-
-    def load_notifiers
-      @notifiers_path = CONFIG['notifiers_path'] || '../pushr_notifiers'
-      @notifiers = []
-      CONFIG['notifiers'].each do |notifier|
-        notifier_name, notifier_config = notifier.to_a.flatten
-        unless Pushr::Notifier::const_defined?(notifier_name.to_s.camelize)
-          begin
-            require File.join( File.dirname(__FILE__), @notifiers_path, notifier_name  ) 
-          rescue Exception => e
-            raise LoadError, "Notifier #{notifier_name} not found! (#{e.message})"
-          end
-        end
-        @notifiers << Pushr::Notifier::const_get( notifier_name.to_s.camelize ).new(notifier_config)
-      end
-    end
-
-    def send_notifications
-      @notifiers.each { |n| n.deliver!(self) }
     end
 
   end # end Application
