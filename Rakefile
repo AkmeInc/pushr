@@ -19,14 +19,12 @@ namespace :start do
   end
   task :production do
     %x[thin -R config.ru -d -P thin.pid -l production.log -e production -p 4000 start]
-    puts "> Pushr started on port 4000" if $?.success?
   end
 end
 
 desc "Stop application in production mode"
 task :stop do
   %x[thin -R config.ru -d -P thin.pid -l production.log -e production -p 4000 stop]
-  puts "> Pushr stopped" if $?.success?
 end
 
 # -- Maintenance
