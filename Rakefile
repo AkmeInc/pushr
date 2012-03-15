@@ -46,7 +46,7 @@ namespace :app do
       puts "[!] Bad! Some gems for Pushr are missing!"
       puts e.message
     ensure
-      Sinatra::Application.default_options.merge!(:run => false)
+      Sinatra::Base.set(:run, false)
     end
   end
   desc "Add public key for the user@server to 'itself' (so Cap can SSH to localhost)"
