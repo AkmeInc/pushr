@@ -3,6 +3,7 @@
 #   - rake
 #   - sinatra
 #   - thin
+#   - json
 #   - haml
 #   - sass
 
@@ -10,6 +11,7 @@ require 'rubygems'
 require 'sinatra'
 require 'yaml'
 require 'logger'
+require 'json'
 
 # = Pushr
 # Deploy Rails applications by Github Post-Receive URLs launching Capistrano's commands
@@ -129,8 +131,17 @@ end
 # == Deploy!
 post '/' do
   @pushr = Pushr::Application.new(CONFIG['path'])
-  @pushr.deploy!
-  haml :deployed
+
+  if params[:payload]
+    # GitHub Post-Receive Hook
+    push = JSON.parse(params[:payload])
+    @pushr.deploy! if push['ref'] == 'refs/heads/master'
+    [200, 'OK']
+  else
+    # Deploy via web GUI
+    @pushr.deploy!
+    haml :deployed
+  end
 end
 
 # == Look nice
