@@ -73,10 +73,11 @@ module Pushr
       @repository  = Repository.new(path)
     end
 
-    def deploy!
+    def deploy!(options = {})
       cap_command = CONFIG['cap_command'] || 'deploy:migrations'
+      cap_stage = options[:stage] || CONFIG['cap_default_stage']
       log.info(application) { "Deployment starting..." }
-      @cap_output  = %x[cd #{path}/shared/cached-copy; bundle install && bundle exec cap #{cap_command} 2>&1]
+      @cap_output  = %x[cd #{path}/shared/cached-copy; bundle install && bundle exec cap #{cap_stage} #{cap_command} 2>&1]
       @success     = $?.success?
       @repository.reload!  # Update repository info (after deploy)
       log_deploy_result
@@ -139,7 +140,7 @@ post '/' do
     [200, 'OK']
   else
     # Deploy via web GUI
-    @pushr.deploy!
+    @pushr.deploy!(params)
     haml :deployed
   end
 end

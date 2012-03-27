@@ -8,5 +8,8 @@ password: ~
 # * Full path to your Rails application, eg. "/var/www/my_rails_app"
 path:  ~
 
-# * Capistrano command (defaults to `cap deploy:migrations` if not set)
+# * Capistrano command (defaults to `deploy:migrations` if not set)
 cap_command: ~
+
+# * Capistrano multistage support
+cap_default_stage: ~
