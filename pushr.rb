@@ -1,3 +1,11 @@
+# The bundler can't be used due to BUNDLE_GEMFILE bug, see e09c65 commit.
+# Required gems:
+#   - rake
+#   - sinatra
+#   - thin
+#   - haml
+#   - sass
+
 require 'rubygems'
 require 'sinatra'
 require 'yaml'
