@@ -12,6 +12,9 @@ require 'sinatra'
 require 'yaml'
 require 'logger'
 require 'json'
+require 'haml'
+require 'sass'
+require 'yaml'
 
 # = Pushr
 # Deploy Rails applications by Github Post-Receive URLs launching Capistrano's commands
@@ -75,12 +78,48 @@ module Pushr
 
     def deploy!(options = {})
       cap_command = CONFIG['cap_command'] || 'deploy:migrations'
-      cap_stage = options[:stage] || CONFIG['cap_default_stage']
+      cap_stage = options[:staging_env] ? CONFIG['cap_staging_stage'] : CONFIG['cap_default_stage']
+
+      command = "bundle exec cap #{cap_stage} #{cap_command}"
+      command = "RAILS_ENV=#{options[:staging_env]} BRANCH=#{options[:branch]} #{command}" if staging?(cap_stage)
+
       log.info(application) { "Deployment starting..." }
-      @cap_output  = %x[cd #{path}/shared/cached-copy; bundle install && bundle exec cap #{cap_stage} #{cap_command} 2>&1]
+      @cap_output  = %x[cd #{path}/shared/cached-copy; bundle install && #{command} 2>&1]
       @success     = $?.success?
       @repository.reload!  # Update repository info (after deploy)
+
+      update_statistics(options) if staging?(cap_stage)
+
       log_deploy_result
+    end
+
+    def available_stages
+      CONFIG['cap_staging_envs']
+    end
+
+    def remote_branches
+      output = %x[cd #{path}/shared/cached-copy; git ls-remote --heads origin]
+      output.scan(/\S+\s+refs\/heads\/(.+)$/).flatten
+    end
+
+    def statistics
+      file = File.join File.dirname(__FILE__), 'statistics.yaml'
+      File.open(file, "r") { |f| YAML.load(f) } || {}
+    end
+
+    def update_statistics(options)
+      opts = { 'name'   => (options[:name] || 'rails'),
+               'branch' => (options[:branch] || 'master'),
+               'at'     => Time.now }
+
+      updated = statistics.merge(options[:staging_env] => opts)
+
+      file = File.join File.dirname(__FILE__), 'statistics.yaml'
+      File.open(file, "w") { |f| f.puts updated.to_yaml }
+    end
+
+    def staging?(stage)
+      stage == CONFIG['cap_staging_stage']
     end
 
     private
@@ -126,6 +165,7 @@ end
 # == Get info
 get '/' do
   @pushr = Pushr::Application.new(CONFIG['path'])
+  @name = request.cookies["username"]
   haml :info
 end
 
@@ -141,6 +181,7 @@ post '/' do
   else
     # Deploy via web GUI
     @pushr.deploy!(params)
+    response.set_cookie("username", :value => params[:name], :expires => (Time.now + 60 * 60 * 24 * 30))
     haml :deployed
   end
 end
@@ -164,32 +205,43 @@ __END__
     = yield
 
 @@ info
-%div.info
-  %p
+#wrapper
+  %form{:action => "/", :method => 'post', :id => 'deploy', :onsubmit => "this.submit.disabled='true'"}
+    Deploy
+    %select{:name => "branch"}
+      - @pushr.remote_branches.each do |branch|
+        %option= branch
+    to
+    %select{:name => "staging_env"}
+      - @pushr.available_stages.each do |stage|
+        %option= stage
+    by
+    %input{:type => 'text', :name => 'name', :placeholder => 'Your name', :class => 'name', :value => @name}
+    %input{:type => 'submit', :value => 'Run', :name => 'submit', :class => 'submit'}
+  #statistics
+    - @pushr.statistics.each do |env, opts|
+      %div
+        %strong #{env}:        
+        = opts['branch']
+        %span was deployed by
+        = opts['name']
+        %span at
+        = opts['at']
+  #last_revision
     Last deployed revision of
-    %strong
-      %em
-        = @pushr.application
+    %strong= @pushr.application
     is
-    %strong
-      = @pushr.repository.info.revision
+    %strong= @pushr.repository.info.revision
     \:
-    %strong
-      %em
-        = @pushr.repository.info.message
+    %strong= @pushr.repository.info.message
     committed
-    %strong
-      = @pushr.repository.info.when
+    %strong= @pushr.repository.info.when
     by
     = @pushr.repository.info.author
-  %p
-    %form{ :action => "/", :method => 'post', :onsubmit => "this.submit.disabled='true'" }
-      %input{ 'type' => 'submit', 'value' => 'Deploy!', 'name' => 'submit', :id => 'submit' }
-
 
 @@ deployed
 - if @pushr.success
-  %div.success
+  #wrapper.success
     %h2
       Application deployed successfully.
     %form{ 'action' => "", :method => 'get' }
@@ -198,7 +250,7 @@ __END__
     %pre
       = @pushr.cap_output
 - else
-  %div.failure
+  #wrapper.failure
     %h2
       There were errors when deploying the application!
     %form{ 'action' => "", :method => 'get' }
@@ -209,24 +261,13 @@ __END__
 
 @@ style
 body
-  :color #000
-  :background #f8f8f8
+  :color #333
   :font-size 90%
   :font-family Helvetica, Tahoma, sans-serif
   :line-height 1.5
   :padding 10%
-  :text-align center
-div
-  :border 4px solid #ccc
-  :padding 3em
-div h2
-  :margin-bottom 1em
 a
   :color #000
-div.success h2
-  :color #128B45
-div.failure h2
-  :color #E21F3A
 pre
   :color #444
   :font-size 95%
@@ -236,3 +277,27 @@ pre
   :white-space pre-wrap
   :white-space -moz-pre-wrap
   :white-space -o-pre-wrap
+#wrapper
+  :border 4px solid #ccc
+  :padding 1.5em 2em
+  h2
+    :margin-bottom 1em
+#wrapper.success h2
+  :color #128B45
+#wrapper.failure h2
+  :color #E21F3A
+#statistics
+  :margin-top 2em
+  span
+    :color #888
+#last_revision
+  :margin-top 2em
+  :font-size 12px
+#deploy
+  select
+    :margin 0 5px
+  input.name
+    :margin 0 5px 0 5px
+    :width 100px
+  input.submit
+    :font-weight bold

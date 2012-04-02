@@ -1,15 +1,21 @@
-# * Set name of your application
+# Set name of your application
 application: Awesome
 
-# * Username/password for HTTP Auth
+# Username/password for HTTP Auth
 username: ~
 password: ~
 
-# * Full path to your Rails application, eg. "/var/www/my_rails_app"
+# Full path to your Rails application, eg. "/var/www/my_rails_app"
 path:  ~
 
-# * Capistrano command (defaults to `deploy:migrations` if not set)
+# Capistrano command (defaults to `deploy:migrations` if not set)
 cap_command: ~
 
-# * Capistrano multistage support
+# Capistrano multistage support (the stage is used for GitHub Post-Receive Hook)
 cap_default_stage: ~
+
+# Capistrano 'staging' stage name
+cap_staging_stage: ~
+
+# Capistrano 'staging' ENVs
+cap_staging_envs: []
