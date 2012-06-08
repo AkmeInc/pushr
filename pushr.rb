@@ -193,6 +193,11 @@ get '/style.css' do
 end
 get( '/favicon.ico' ) { content_type 'image/gif' }
 
+post '/clonedb-production' do
+  `clonedb-production`
+  redirect '/'
+end
+
 __END__
 
 @@ layout
@@ -206,6 +211,10 @@ __END__
 
 @@ info
 #wrapper
+  #release
+    %strong release
+    %form{:action => "/clonedb-production", :method => 'post'}
+      %input{:type => 'submit', :value => 'Clone Production Database'}
   %form{:action => "/", :method => 'post', :id => 'deploy', :onsubmit => "this.submit.disabled='true'"}
     Deploy
     %select{:name => "branch"}
@@ -286,6 +295,10 @@ pre
   :color #128B45
 #wrapper.failure h2
   :color #E21F3A
+#release
+  :float right
+  form
+    :margin-bottom 0
 #statistics
   :margin-top 2em
   span
