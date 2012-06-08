@@ -12,10 +12,7 @@ path:  ~
 cap_command: ~
 
 # Capistrano multistage support (the stage is used for GitHub Post-Receive Hook)
-cap_default_stage: ~
-
-# Capistrano 'staging' stage name
-cap_staging_stage: ~
+cap_default_rails_env: ~
 
 # Capistrano 'staging' ENVs
 cap_staging_envs: []

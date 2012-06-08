@@ -78,22 +78,21 @@ module Pushr
 
     def deploy!(options = {})
       cap_command = CONFIG['cap_command'] || 'deploy:migrations'
-      cap_stage = options[:staging_env] ? CONFIG['cap_staging_stage'] : CONFIG['cap_default_stage']
+      rails_env = options[:rails_env] || CONFIG['cap_default_rails_env']
 
-      command = "bundle exec cap #{cap_stage} #{cap_command}"
-      command = "RAILS_ENV=#{options[:staging_env]} BRANCH=#{options[:branch]} #{command}" if staging?(cap_stage)
+      command = "BRANCH=#{options[:branch]} bundle exec cap #{rails_env} #{cap_command}"
 
       log.info(application) { "Deployment starting..." }
       @cap_output  = %x[cd #{path}/shared/cached-copy; bundle install && #{command} 2>&1]
       @success     = $?.success?
       @repository.reload!  # Update repository info (after deploy)
 
-      update_statistics(options) if staging?(cap_stage)
+      update_statistics(options)
 
       log_deploy_result
     end
 
-    def available_stages
+    def available_envs
       CONFIG['cap_staging_envs']
     end
 
@@ -112,14 +111,10 @@ module Pushr
                'branch' => (options[:branch] || 'master'),
                'at'     => Time.now }
 
-      updated = statistics.merge(options[:staging_env] => opts)
+      updated = statistics.merge(options[:rails_env] => opts)
 
       file = File.join File.dirname(__FILE__), 'statistics.yaml'
       File.open(file, "w") { |f| f.puts updated.to_yaml }
-    end
-
-    def staging?(stage)
-      stage == CONFIG['cap_staging_stage']
     end
 
     private
@@ -215,14 +210,18 @@ __END__
     %strong release
     %form{:action => "/clonedb-production", :method => 'post'}
       %input{:type => 'submit', :value => 'Clone Production Database'}
+    %form{:action => "/", :method => 'post'}
+      %input{:type => 'hidden', :name => 'branch', :value => 'master'}
+      %input{:type => 'hidden', :name => 'rails_env', :value => 'release'}
+      %input{:type => 'submit', :value => 'Redeploy'}
   %form{:action => "/", :method => 'post', :id => 'deploy', :onsubmit => "this.submit.disabled='true'"}
     Deploy
     %select{:name => "branch"}
       - @pushr.remote_branches.each do |branch|
         %option= branch
     to
-    %select{:name => "staging_env"}
-      - @pushr.available_stages.each do |stage|
+    %select{:name => "rails_env"}
+      - @pushr.available_envs.each do |stage|
         %option= stage
     by
     %input{:type => 'text', :name => 'name', :placeholder => 'Your name', :class => 'name', :value => @name}
