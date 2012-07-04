@@ -188,8 +188,13 @@ get '/style.css' do
 end
 get( '/favicon.ico' ) { content_type 'image/gif' }
 
-post '/clonedb-production' do
-  `clonedb-production`
+post '/updatedb-salesworker-production' do
+  `updatedb-salesworker-production`
+  redirect '/'
+end
+
+post '/env-use-salesworker-production' do
+  `env-use-salesworker-production #{params[:rails_env]}`
   redirect '/'
 end
 
@@ -207,13 +212,14 @@ __END__
 @@ info
 #wrapper
   #release
-    %strong release
-    %form{:action => "/clonedb-production", :method => 'post'}
-      %input{:type => 'submit', :value => 'Clone Production Database'}
-    %form{:action => "/", :method => 'post'}
-      %input{:type => 'hidden', :name => 'branch', :value => 'master'}
-      %input{:type => 'hidden', :name => 'rails_env', :value => 'release'}
-      %input{:type => 'submit', :value => 'Redeploy'}
+    %strong salesworker_production
+    %form{:action => "/updatedb-salesworker-production", :method => 'post'}
+      %input{:type => 'submit', :value => 'Update DB'}
+    %form{:action => "/env-use-salesworker-production", :method => 'post'}
+      %input{:type => 'submit', :value => 'Use DB on'}
+      %select{:name => "rails_env"}
+        - @pushr.available_envs.each do |stage|
+          %option= stage
   %form{:action => "/", :method => 'post', :id => 'deploy', :onsubmit => "this.submit.disabled='true'"}
     Deploy
     %select{:name => "branch"}
