@@ -198,6 +198,12 @@ post '/env-use-salesworker-production' do
   redirect '/'
 end
 
+post '/reindex-elastic-search' do
+  env_path = "#{CONFIG['path']}/../#{CONFIG['application'].downcase}-#{params[:rails_env]}/current"
+  `cd #{env_path} && RAILS_ENV=#{params[:rails_env]} bundle exec rake tire:bootstrap`
+  redirect '/'
+end
+
 __END__
 
 @@ layout
@@ -211,6 +217,13 @@ __END__
 
 @@ info
 #wrapper
+  #elastic-search
+    %strong elastic search
+    %form{:action => "/reindex-elastic-search", :method => 'post'}
+      %input{:type => 'submit', :value => 'reindex on'}
+      %select{:name => "rails_env"}
+        - @pushr.available_envs.each do |stage|
+          %option= stage
   #release
     %strong salesworker_production
     %form{:action => "/updatedb-salesworker-production", :method => 'post'}
@@ -235,7 +248,7 @@ __END__
   #statistics
     - @pushr.statistics.each do |env, opts|
       %div
-        %strong #{env}:        
+        %strong #{env}:
         = opts['branch']
         %span was deployed by
         = opts['name']
@@ -300,8 +313,9 @@ pre
   :color #128B45
 #wrapper.failure h2
   :color #E21F3A
-#release
+#release, #elastic-search
   :float right
+  :margin-left 20px
   form
     :margin-bottom 0
 #statistics
