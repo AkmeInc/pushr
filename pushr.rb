@@ -170,7 +170,7 @@ post '/' do
   if params[:payload]
     # GitHub Post-Receive Hook
     push = JSON.parse(params[:payload])
-    @pushr.deploy! if push['ref'] == 'refs/heads/master'
+    @pushr.deploy!(:branch => 'master') if push['ref'] == 'refs/heads/master'
     [200, 'OK']
   else
     # Deploy via web GUI
