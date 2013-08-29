@@ -15,16 +15,16 @@ task :start   => 'start:production'
 
 namespace :start do
   task :development do
-    system "ruby pushr.rb -p 4000"
+    system "ruby pushr.rb -p  #{CONFIG['PORT']}"
   end
   task :production do
-    %x[thin -R config.ru -d -P thin.pid -l production.log -e production -p 4000 start]
+    %x[thin -R config.ru -d -P #{CONFIG['pid_file']} -l production.log -e production -p #{CONFIG['PORT']} start]
   end
 end
 
 desc "Stop application in production mode"
 task :stop do
-  %x[thin -R config.ru -d -P thin.pid -l production.log -e production -p 4000 stop]
+  %x[thin -R config.ru -d -P #{CONFIG['pid_file']} -l production.log -e production -p #{CONFIG['PORT']} stop]
 end
 
 # -- Maintenance
